@@ -80,9 +80,9 @@ int main(int argc, char* argv[]) {
     char buffer[INBUFSIZE];
     int writes[2] = {fd_1[WRITE], fd_2[WRITE]};
 
-    for (uint i = 0; fgets(buffer, INBUFSIZE, stdin) != NULL; ++i) {  // is NULL on EOF or error
+    for (int i = 0; fgets(buffer, INBUFSIZE, stdin) != NULL; ++i) {  // is NULL on EOF or error
         if (write(writes[i % 2], buffer, strlen(buffer) + 1) < 0) {
-            pe
+            perror();
         }
     }
 
