@@ -23,6 +23,8 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+    setbuf(stdout, NULL);  // debug, uncomment to output printfs during deadlocks
+
     /*
         Créer les pipes 
     */
@@ -51,17 +53,7 @@ int main(int argc, char* argv[])
     const char* shm_addr = shmat(shm_id, NULL, 0);  // Attacher le shm pour tout processus
 
     /* 
-        Créer les processus (fork)
-
-            * Un pipe par processus (fonction dont on passe le fd par param ?)
-            * Si parent, close(fd[READ])
-            * Si enfant:
-                - Ignorer SIG_INT (pas sûr que c'est bien ça qu'il faut faire ?)
-                - close(fd[WRITE])
-                - Peut-être une fonction comparerImages() qui attend systématiquement
-                  des écritures de path d'image dans fd venant du parent (avec while loop
-                  et pause() ?)
-            * Gestion d'erreur
+        Créer les processus
     */
 
     pid_t pid[2];
@@ -75,13 +67,16 @@ int main(int argc, char* argv[])
             /*  Init  */
 
             close(fd[i][WRITE]);
-            compareImages(argv[1], fd[i][READ]);
+
+            /*  Fonctionnalité  */
+
+            int res = compareImages(argv[1], fd[i][READ]);
 
             /*  Cleanup  */
 
             cleanup_child(fd[i][READ], shm_addr);
 
-            exit(0);
+            exit(res);
         }
     }
 
@@ -91,17 +86,21 @@ int main(int argc, char* argv[])
         Ecrire dans les pipes les chemins d'images un par un
     */
 
-   /*  Init  */
+    /*  Init  */
 
     close(fd[0][READ]);
     close(fd[1][READ]);
 
-    const int fd_writes[2] = { fd[0][WRITE], fd[1][WRITE] };
-    feedImagePaths(fd_writes);
+    /*  Fonctionnalité  */
+
+    int res = feedImagePaths(pid, fd);
+    int status[2];
 
     /*  Cleanup  */
 
+    for (int i = 0; i < 2; ++i) wait(&status[i]);
+    
     cleanup_parent(fd, shm_addr, shm_id);
 
-    exit(0);
+    exit(res);
 }
