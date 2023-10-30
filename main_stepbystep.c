@@ -6,53 +6,10 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-#define READ 0
-#define WRITE 1
+#include "common.h"
 
-#define MAXPATHLENGTH 1000  // 999 chars + '\n'
-
-typedef struct 
-{
-    int dist;
-    char path[MAXPATHLENGTH];
-} 
-shm_data_t;
-
-#define SHMSIZE sizeof(shm_data_t)  // == 1004 : 1000 pour le chemin, 4 pour la distance (int)
-
-void cleanup_parent(int fd[2][2], int* shm_addr, int shm_id)
-{
-    close(fd[0][WRITE]);
-    close(fd[1][WRITE]);
-
-    if (shmdt(shm_addr) < 0)  // Détacher le shm
-    {
-        perror("shmdt for some ungodly reason");
-        exit(1);
-    }
-
-    if (shmctl(shm_id, IPC_RMID, NULL) < 0)  // Supprimer le shm
-    {
-        perror("shmctl");
-        exit(1);
-    }
-}
-
-void compareImages(char* base, int fd_read)
-{
-    
-}
-
-void feedImagePaths(const int fd_writes[2])
-{
-    int i = 0;
-    char buffer[MAXPATHLENGTH];
-
-    // while (fgets(buffer, MAXPATHLENGTH, stdin) != NULL)  // Lire jusqu'à EOF ou erreur
-    // {
-        
-    // }
-}
+#include "parent.h"
+#include "child.h"
 
 int main(int argc, char* argv[]) 
 {
@@ -91,7 +48,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    int* shm_addr = shmat(shm_id, NULL, 0);  // Attacher le shm pour tout processus
+    const char* shm_addr = shmat(shm_id, NULL, 0);  // Attacher le shm pour tout processus
 
     /* 
         Créer les processus (fork)
@@ -122,14 +79,8 @@ int main(int argc, char* argv[])
 
             /*  Cleanup  */
 
-            close(fd[i][READ]);  // À la fin, ferme tous les pipes
+            cleanup_child(fd[i][READ], shm_addr);
 
-            if (shmdt(shm_addr) < 0)  // Détacher le shm
-            {
-                perror("shmdt for some ungodly reason");
-                exit(1);
-            }
-            
             exit(0);
         }
     }
@@ -151,4 +102,6 @@ int main(int argc, char* argv[])
     /*  Cleanup  */
 
     cleanup_parent(fd, shm_addr, shm_id);
+
+    exit(0);
 }
