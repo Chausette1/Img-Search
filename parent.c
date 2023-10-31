@@ -53,11 +53,16 @@ void cleanup_parent(int fd[2][2], const char* shm_addr, int shm_id)
 */
 int feedImagePaths(pid_t pid[2], int fd[2][2])
 {
+    printf("BEGIN OF");
     unsigned int i = 0;
     char buffer[MAXPATHLENGTH];
 
     while (fgets(buffer, MAXPATHLENGTH, stdin) != NULL)  // Lire jusqu'à EOF ou erreur
     {
+        // Supprimer le newline éventuel
+
+        buffer[strcspn(buffer, "\n")] = '\0';
+
         // Si write() échoue 3 fois sans SIGPIPE, abandonner et terminer
         // EX : si le parent est interrompu par un signal mais résume après
 
@@ -90,9 +95,11 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
         return 1;
     }
 
-    buffer[0] = '\0';
+    buffer[0] = (char) 255;  // End flag
     write(fd[0][WRITE], buffer, MAXPATHLENGTH);
     write(fd[1][WRITE], buffer, MAXPATHLENGTH);
+
+    printf("END OF");
 
     return 0;
 }

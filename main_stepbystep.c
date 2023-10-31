@@ -71,13 +71,19 @@ int main(int argc, char* argv[])
             /*  Fonctionnalité  */
 
             int res = compareImages(argv[1], fd[i][READ]);
+            printf("res = %d\n", res);
 
             /*  Cleanup  */
 
             cleanup_child(fd[i][READ], shm_addr);
-
             exit(res);
         }
+        else if (pid[i] < 0)
+        {
+            perror("main -> fork");
+            exit(1);
+        }
+
     }
 
     // Processus parent
@@ -93,14 +99,20 @@ int main(int argc, char* argv[])
 
     /*  Fonctionnalité  */
 
+    printf("A");
+
     int res = feedImagePaths(pid, fd);
     int status[2];
 
     /*  Cleanup  */
 
-    for (int i = 0; i < 2; ++i) wait(&status[i]);
+    printf("B");
+
+    wait(&status[0]);
+    wait(&status[1]);
+
+    printf("C");
     
     cleanup_parent(fd, shm_addr, shm_id);
-
     exit(res);
 }
