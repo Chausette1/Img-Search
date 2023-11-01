@@ -27,7 +27,7 @@ pid_t createChildProcess(int fd[2]) {
     pid_t pid = fork();
 
     if (pid == 0) {  // Child process
-        signal(SIGINT, SIG_IGN);
+        signal(SIGINT, SIG_IGN);  //On ignore le signal d'interuption
 
         close(fd[WRITE]);
         compareImages(fd[READ]);
@@ -36,7 +36,7 @@ pid_t createChildProcess(int fd[2]) {
         exit(0);
     } 
     else if (pid > 0) {  // Parent process
-        signal(SIGINT, killAll);
+        signal(SIGINT, killAll); //on redéfini les signaux de sortie pour close de manière propre
 
         close(fd[READ]);
     } 
@@ -49,11 +49,11 @@ pid_t createChildProcess(int fd[2]) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 1) {
+    if (argc != 2) { ///Il faut 2 arg pour lancer le programme (nom du programme + chemin de l'img)
         exit(1);
     }
 
-    char *path = argv[0];
+    char *path = argv[1]; /// création de path qui est le chemin de l'img a comparer
 
     // Create pipes
 
@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
     int writes[2] = {fd_1[WRITE], fd_2[WRITE]};
 
     for (int i = 0; fgets(buffer, INBUFSIZE, stdin) != NULL; ++i) {  // is NULL on EOF or error
-        if (write(writes[i % 2], buffer, strlen(buffer) + 1) < 0) {
-            perror();
+        if (write(writes[i % 2], buffer, strlen(buffer) + 1) < 0) { // why strlen(buffer) "+ 1"
+            perror("");
         }
     }
 
