@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
+#include <sys/mman.h>
 #include <string.h>
 #include <semaphore.h>
 
@@ -36,7 +36,6 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
         if (pid == 0)
         {
             // Supposé que img-dist est dans PATH
-            printf("current proc: %d\n", getpid());
             printf("buffer = \"%s\"; length = %lu\n", buffer, strlen(buffer));
 
             // img-dist : 0 -> 64 = ok, 65 -> = erreur
@@ -53,6 +52,8 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
             int status;
             wait(&status);
 
+            printf("status = %d\n", WEXITSTATUS(status));
+
             if (WEXITSTATUS(status) >= 0 && WEXITSTATUS(status) <= 64)
             {
                 // Comparer et enregistrer
@@ -61,6 +62,8 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
                 sem_wait(sem);
 
+                printf("IN SECTION CRITIQUE");
+
                 if (path[0] == '\0' || *dist > newdist)
                 {
                     *dist = newdist;
@@ -68,6 +71,8 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
                 }
 
                 sem_post(sem);
+
+                printf("critique DONE\n");
             }
         }
         else
@@ -85,19 +90,14 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
     Fermer les pipes et détacher le shm. Cette fonction doit être la dernière à
     être appelée.
 */
-void cleanup_child(int fd_read, int * dist, char * path)
+int cleanup_child(int fd_read, int * dist, char * path)
 {
     close(fd_read);  // À la fin, ferme tous les pipes
 
-    if (shmdt(dist) < 0)  // Détacher le shm
-    {
-        perror("shmdt");
-        exit(1);
-    }
+    int err = 0;
 
-    if (shmdt(path) < 0)  // Détacher le shm
-    {
-        perror("shmdt");
-        exit(1);
-    }
+    if ((err |= munmap(dist, sizeof(int)) < 0)) perror("munmap");
+    if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
+
+    return err;
 }

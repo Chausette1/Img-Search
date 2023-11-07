@@ -19,7 +19,7 @@ void terminateChildProcesses(pid_t pid[2])
 {
     for (int i = 0; i < 2; ++i)
     {
-        if (kill(pid[i], SIGTERM) < 0) perror("Error terminating child process (wtf)");
+        if (kill(pid[i], SIGTERM) < 0) perror("Error terminating child process");
     }
 }
 
@@ -27,15 +27,28 @@ void terminateChildProcesses(pid_t pid[2])
     Fermer les pipes et supprimer le shm. Cette fonction doit être la dernière à
     être appelée.
 */
-void cleanup_parent(int fd[2][2], int * dist, char * path, sem_t* sem, char * sem_name)
+int cleanup_parent(int fd[2][2], int * dist, char * path, sem_t * sem)
 {
+    int err = 0;
+
     close(fd[0][WRITE]);
     close(fd[1][WRITE]);
 
-    if (munmap(dist, sizeof(int)) < 0) perror("munmap");
-    if (munmap(path, sizeof(char) * MAXPATHLENGTH) < 0) perror("munmap");
+    if ((err |= munmap(dist, sizeof(int)) < 0)) perror("munmap");
+    if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
 
-    if (sem_destroy(sem) < 0) perror("sem_destroy");
+    #ifdef __APPLE__
+
+        if ((err |= sem_close(sem) < 0)) perror("sem_close");
+        if ((err |= sem_unlink(OSX_SEMNAME) < 0)) perror("sem_unlink");
+
+    #else
+
+        if ((err |= sem_destroy(sem) < 0)) perror("sem_destroy");
+
+    #endif
+
+    return err;
 }
 
 /*
@@ -47,7 +60,7 @@ void cleanup_parent(int fd[2][2], int * dist, char * path, sem_t* sem, char * se
 */
 int feedImagePaths(pid_t pid[2], int fd[2][2])
 {
-    printf("BEGIN OF");
+    printf("BEGIN OF PARENT\n");
     unsigned int i = 0;
     char buffer[MAXPATHLENGTH];
 
@@ -73,6 +86,8 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
         } 
         while (bytes < 0 && att < WRITE_ATTEMPTS);
 
+        printf("DID WRITE\n");
+
         if (bytes < 0)  // Write échec
         {
             terminateChildProcesses(pid);
@@ -92,7 +107,7 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
         return 1;
     }
 
-    buffer[0] = (char) 255;  // End flag
+    buffer[0] = (char) -1;  // End flag
     write(fd[0][WRITE], buffer, MAXPATHLENGTH);
     write(fd[1][WRITE], buffer, MAXPATHLENGTH);
 
