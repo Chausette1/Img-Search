@@ -6,6 +6,8 @@
 #include <signal.h>
 #include <sys/mman.h>
 
+#include "common.h"
+
 #define READ 0
 #define WRITE 1
 
@@ -50,17 +52,14 @@ pid_t createChildProcess(int fd[2]) {
 }
 
 void *create_shared_memory(size_t size) {
-  // From https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
-  // Our memory buffer will be readable and writable:
+/*
+Pour créer de la mémoire partager il suffis de définir le type, donner un noms a sa variable et
+d'appeller la fonction create_shared_memory() et de donner la taille en octets comme pour les malloc.
+ex : int *shmem_tab = create_shared_memory(sizeof(int)*5) //pour un tableau de int de taille 5
+ps : le shmem veut dire shared memory 
+*/   
   const int protection = PROT_READ | PROT_WRITE;
-
-  // The buffer will be shared (meaning other processes can access it), but
-  // anonymous (meaning third-party processes cannot obtain an address for it),
-  // so only this process and its children will be able to use it:
   const int visibility = MAP_SHARED | MAP_ANONYMOUS;
-
-  // The remaining parameters to `mmap()` are not important for this use case,
-  // but the manpage for `mmap` explains their purpose.
   return mmap(NULL, size, protection, visibility, -1, 0);
 }
 
@@ -81,7 +80,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Create shared memory
-    
+    int *shmem_lowest_distance = create_shared_memory(sizeof(int));
+    if (*shmem_lowest_distance == MAP_FAILED){
+        perror("mmap() error");
+        exit(1);
+    }
     // ...
 
     // Create child processes

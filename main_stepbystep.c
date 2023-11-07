@@ -5,11 +5,38 @@
 #include <signal.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/mman.h>
 
 #include "common.h"
-
 #include "parent.h"
 #include "child.h"
+#include "signal.h"
+
+/*
+    Création des variables globale qu'on a besoin dans la gestion des signaux.
+*/
+
+int fd[2][2];  // 2 fd, un pour chaque processus fils
+int *shmem_lowest_distance; //variable globale distance
+
+void *create_shared_memory(size_t size) {
+/*
+Pour créer de la mémoire partager il suffis de définir le type, donner un noms a sa variable et
+d'appeller la fonction create_shared_memory() et de donner la taille en octets comme pour les malloc.
+ex : int *shmem_tab = create_shared_memory(sizeof(int)*5) //pour un tableau de int de taille 5
+et munmap(shmem_tab, sizeof(int)*5); // pour désallouer la mémoire partager
+ps : le shmem veut dire shared memory 
+*/   
+  const int protection = PROT_READ | PROT_WRITE;
+  const int visibility = MAP_SHARED | MAP_ANONYMOUS;
+  int ret = mmap(NULL, size, protection, visibility, -1, 0);
+  if (ret == MAP_FAILED){
+        perror("mmap() error");
+        exit(1);
+  }
+  return ret;
+}
+
 
 int main(int argc, char* argv[]) 
 {
@@ -26,10 +53,17 @@ int main(int argc, char* argv[])
     setbuf(stdout, NULL);  // debug, uncomment to output printfs during deadlocks
 
     /*
-        Créer les pipes 
+        Gestion des signaux
     */
 
-    int fd[2][2];  // 2 fd, un pour chaque processus fils
+    if(signal(SIGINT, terminateChildProcesses) == SIG_ERR){
+        perror("Signal error");
+        exit(1);
+    }
+
+    /*
+        Créer les pipes 
+    */
 
     if (pipe(fd[0]) < 0 || pipe(fd[1]) < 0) 
     {
@@ -41,16 +75,7 @@ int main(int argc, char* argv[])
         Créer la mémoire partagée
     */
 
-    int key = 1729;
-    int shm_id = shmget(key, SHMSIZE, IPC_CREAT | IPC_EXCL | 0600);
-
-    if (shm_id < 0) 
-    {
-        perror("shmget");
-        exit(1);
-    }
-
-    const char* shm_addr = shmat(shm_id, NULL, 0);  // Attacher le shm pour tout processus
+    shmem_lowest_distance = create_shared_memory(sizeof(int));
 
     /* 
         Créer les processus
@@ -67,6 +92,15 @@ int main(int argc, char* argv[])
             /*  Init  */
 
             close(fd[i][WRITE]);
+            
+            if(signal(SIGINT, SIG_IGN) == SIG_ERR){
+                perror("Signal error");
+                exit(1);
+            }
+            if(signal(SIGTERM, handler_sigterm) == SIG_ERR){
+                perror("signal error");
+                exit(1);
+            }
 
             /*  Fonctionnalité  */
 
@@ -75,7 +109,7 @@ int main(int argc, char* argv[])
 
             /*  Cleanup  */
 
-            cleanup_child(fd[i][READ], shm_addr);
+            cleanup_child(fd[i][READ]);
             exit(res);
         }
         else if (pid[i] < 0)
@@ -91,6 +125,8 @@ int main(int argc, char* argv[])
     /* 
         Ecrire dans les pipes les chemins d'images un par un
     */
+
+
 
     /*  Init  */
 
@@ -113,6 +149,6 @@ int main(int argc, char* argv[])
 
     printf("C");
     
-    cleanup_parent(fd, shm_addr, shm_id);
+    cleanup_parent(fd);
     exit(res);
 }

@@ -73,18 +73,3 @@ int compareImages(char* base, int fd_read)
 
     return 0;
 }
-
-/*
-    Fermer les pipes et détacher le shm. Cette fonction doit être la dernière à
-    être appelée.
-*/
-void cleanup_child(int fd_read, const char* shm_addr)
-{
-    close(fd_read);  // À la fin, ferme tous les pipes
-
-    if (shmdt(shm_addr) < 0)  // Détacher le shm
-    {
-        perror("shmdt");
-        exit(1);
-    }
-}

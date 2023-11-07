@@ -6,6 +6,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <string.h>
+#include <sys/mman.h>
 
 #include "common.h"
 
@@ -26,22 +27,11 @@ void terminateChildProcesses(pid_t pid[2])
     Fermer les pipes et supprimer le shm. Cette fonction doit être la dernière à
     être appelée.
 */
-void cleanup_parent(int fd[2][2], const char* shm_addr, int shm_id)
+void cleanup_parent(int fd[2][2])
 {
     close(fd[0][WRITE]);
     close(fd[1][WRITE]);
-
-    if (shmdt(shm_addr) < 0)  // Détacher le shm
-    {
-        perror("shmdt");
-        exit(1);
-    }
-
-    if (shmctl(shm_id, IPC_RMID, NULL) < 0)  // Supprimer le shm
-    {
-        perror("shmctl");
-        exit(1);
-    }
+    munmap(NULL, 1); //il faut munmap toute les mémoires partager
 }
 
 /*
