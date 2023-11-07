@@ -93,11 +93,11 @@ int main(int argc, char* argv[])
 
             close(fd[i][WRITE]);
             
-            if(signal(SIGINT, SIG_IGN) == SIG_ERR){
+            if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
                 perror("Signal error");
                 exit(1);
             }
-            if(signal(SIGTERM, handler_sigterm) == SIG_ERR){
+            if (signal(SIGTERM, handler_sigterm) == SIG_ERR) {
                 perror("signal error");
                 exit(1);
             }
