@@ -10,6 +10,49 @@
 
 #include "common.h"
 
+// ---- Init ---- //
+
+// Signals
+
+int flag_end_child = 0;
+
+void handle_signal_child(int signal)
+{
+    if (signal == SIGTERM)
+    {
+        printf("Terminated by signal %d\n", signal);
+        flag_end_child = 1;
+    }
+}
+
+void mask_signal()
+{
+    sigset_t sigset;
+
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGTERM);
+    sigprocmask(SIG_BLOCK, &sigset, NULL);
+}
+
+void unmask_signal()
+{
+    sigset_t sigset;
+
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGTERM);
+    sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+}
+
+void init_child(int fd_write)
+{
+    close(fd_write);
+
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTERM, handle_signal_child);
+}
+
+// ---- Fonctionnalité ---- //
+
 int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 {
     char buffer[MAXPATHLENGTH];
@@ -17,6 +60,11 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
     while (1)  // Dahl loop my beloved
     {
+        if (flag_end_child == 1)
+        {
+            return 0;
+        }
+
         // Lire le chemin suivant du pipe
 
         bytes = read(fd_read, buffer, MAXPATHLENGTH);
@@ -55,6 +103,7 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
                 int newdist = WEXITSTATUS(status);
 
+                mask_signal();
                 sem_wait(sem);
 
                 if (path[0] == '\0' || *dist > newdist)
@@ -64,6 +113,7 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
                 }
 
                 sem_post(sem);
+                unmask_signal();
             }
         }
         else
@@ -75,6 +125,8 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
     return 0;
 }
+
+// ---- Cleanup ---- //
 
 /*
     Fermer les pipes et détacher le shm. Cette fonction doit être la dernière à
@@ -89,7 +141,7 @@ int cleanup_child(int fd_read, int * dist, char * path, sem_t * sem)
     if ((err |= munmap(dist, sizeof(int)) < 0)) perror("munmap");
     if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
 
+    if ((err |= sem_close(sem) < 0)) perror("sem_close");
     
-
     return err;
 }

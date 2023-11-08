@@ -5,4 +5,4 @@ if ! echo "$PATH" | grep -Eq "(^|:)$1($|:)" ; then
     PATH="$PATH:${tmpdist}"
 fi
 
-make; ./image-search ${imgspath}/1.bmp
+make; ./img-search ${imgspath}/1.bmp

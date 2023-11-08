@@ -45,33 +45,21 @@ void * create_shm(size_t size)
 
 void create_semaphore(sem_t ** semptr)
 {
-    #ifdef __APPLE__  // sem_init() n'existe pas sur OSX
+    *semptr = sem_open(OSX_SEMNAME, O_CREAT | O_EXCL, 0644, 1);
 
-        *semptr = sem_open(OSX_SEMNAME, O_CREAT | O_EXCL, 0644, 1);
-
-        if (*semptr == SEM_FAILED)
+    if (*semptr == SEM_FAILED)
+    {
+        if (errno == EEXIST)
         {
-            if (errno == EEXIST)
-            {
-                sem_unlink(OSX_SEMNAME);
-                create_semaphore(semptr);
-            }
-            else
-            {
-                perror("sem_open");
-                exit(1);
-            }
+            sem_unlink(OSX_SEMNAME);
+            create_semaphore(semptr);
         }
-
-    #else
-    
-        if (sem_init(*semptr, 1, 1) < 0)
+        else
         {
-            perror("sem_init");
+            perror("sem_open");
             exit(1);
         }
-
-    #endif
+    }
 }
 
 int main(int argc, char* argv[]) 
@@ -84,7 +72,7 @@ int main(int argc, char* argv[])
 
     if (argc != 2) 
     {
-        printf("Un paramètre requis : chemin vers l'image de base\n");
+        printf("Usage : ./img-search image\n");
         exit(1);
     }
 
@@ -123,7 +111,7 @@ int main(int argc, char* argv[])
 
             /*  Init  */
 
-            close(fd[i][WRITE]);
+            init_child(fd[i][WRITE]);
 
             /*  Fonctionnalité  */
 
@@ -131,7 +119,7 @@ int main(int argc, char* argv[])
 
             /*  Cleanup  */
 
-            res |= cleanup_child(fd[i][READ], dist_shm, path_shm);
+            res |= cleanup_child(fd[i][READ], dist_shm, path_shm, sem_shm);
             exit(res);
         }
         else if (pid[i] < 0)
@@ -152,8 +140,7 @@ int main(int argc, char* argv[])
 
     /*  Init  */
 
-    close(fd[0][READ]);
-    close(fd[1][READ]);
+    init_parent(fd);
 
     /*  Fonctionnalité  */
 

@@ -10,7 +10,96 @@
 
 #include "common.h"
 
-#define WRITE_ATTEMPTS 3  // Si write() échoue 3 fois sans SIGPIPE, terminer
+// ---- Init ---- //
+
+// Signals
+
+int flag_end_parent = 0;
+
+void handle_signal_parent(int signal)
+{
+    if (signal == SIGINT || signal == SIGPIPE)
+    {
+        printf("Terminated by signal %d\n", signal);
+        flag_end_parent = 1;
+    }
+}
+
+void init_parent(int fd[2][2])
+{
+    close(fd[0][READ]);
+    close(fd[1][READ]);
+
+    signal(SIGINT, handle_signal_parent);
+    signal(SIGPIPE, handle_signal_parent);
+}
+
+// ---- Foncitonnalité ---- //
+
+void terminateChildProcesses(pid_t pid[2]);
+
+/*
+    Alimenter progressivement les pipes avec les chemins vers les images à comparer.
+
+    Retourne :
+        - 0 en cas de succès
+        - 1 en cas d'erreur
+*/
+int feedImagePaths(pid_t pid[2], int fd[2][2])
+{
+    unsigned int i = 0;
+    char buffer[MAXPATHLENGTH];
+
+    while (1)  // Lire jusqu'à EOF ou erreur
+    {
+        if (flag_end_parent)
+        {
+            terminateChildProcesses(pid);
+
+            return 0;
+        }
+
+        if (fgets(buffer, MAXPATHLENGTH, stdin) == NULL) break;
+
+        // Supprimer le newline éventuel
+
+        buffer[strcspn(buffer, "\n")] = '\0';
+
+        // Si write() échoue 3 fois sans SIGPIPE, abandonner et terminer
+        // EX : si le parent est interrompu par un signal mais résume après
+
+        unsigned char att = 0;
+        ssize_t bytes;
+
+        bytes = write(fd[i % 2][WRITE], buffer, MAXPATHLENGTH);
+
+        if (bytes < 0)  // Write échec
+        {
+            terminateChildProcesses(pid);
+
+            perror("write");
+            return 1;
+        }
+
+        i++;
+    }
+
+    if (ferror(stdin)) 
+    {
+        terminateChildProcesses(pid);
+
+        perror("fgets");
+        return 1;
+    }
+
+    buffer[0] = (char) -1;  // End flag
+    write(fd[0][WRITE], buffer, MAXPATHLENGTH);
+    write(fd[1][WRITE], buffer, MAXPATHLENGTH);
+
+    return 0;
+}
+
+// ---- Cleanup ---- //
 
 /*
     Envoyer un signal SIGTERM à chaque processus fils.
@@ -37,78 +126,8 @@ int cleanup_parent(int fd[2][2], int * dist, char * path, sem_t * sem)
     if ((err |= munmap(dist, sizeof(int)) < 0)) perror("munmap");
     if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
 
-    #ifdef __APPLE__
-
-        if ((err |= sem_close(sem) < 0)) perror("sem_close");
-        if ((err |= sem_unlink(OSX_SEMNAME) < 0)) perror("sem_unlink");
-
-    #else
-
-        if ((err |= sem_destroy(sem) < 0)) perror("sem_destroy");
-
-        if ((err |= munmap(sem, sizeof(sem_t)) < 0)) perror("munmap");
-
-    #endif
+    if ((err |= sem_close(sem) < 0)) perror("sem_close");
+    if ((err |= sem_unlink(OSX_SEMNAME) < 0)) perror("sem_unlink");
 
     return err;
-}
-
-/*
-    Alimenter progressivement les pipes avec les chemins vers les images à comparer.
-
-    Retourne :
-        - 0 en cas de succès
-        - 1 en cas d'erreur
-*/
-int feedImagePaths(pid_t pid[2], int fd[2][2])
-{
-    unsigned int i = 0;
-    char buffer[MAXPATHLENGTH];
-
-    while (fgets(buffer, MAXPATHLENGTH, stdin) != NULL)  // Lire jusqu'à EOF ou erreur
-    {
-        // Supprimer le newline éventuel
-
-        buffer[strcspn(buffer, "\n")] = '\0';
-
-        // Si write() échoue 3 fois sans SIGPIPE, abandonner et terminer
-        // EX : si le parent est interrompu par un signal mais résume après
-
-        unsigned char att = 0;
-        ssize_t bytes;
-
-        do 
-        {
-            bytes = write(fd[i % 2][WRITE], buffer, MAXPATHLENGTH);
-
-            
-
-            att++;
-        } 
-        while (bytes < 0 && att < WRITE_ATTEMPTS);
-
-        if (bytes < 0)  // Write échec
-        {
-            terminateChildProcesses(pid);
-
-            perror("write");
-            return 1;
-        }
-
-        i++;
-    }
-
-    if (ferror(stdin)) 
-    {
-        terminateChildProcesses(pid);
-
-        perror("fgets");
-        return 1;
-    }
-
-    buffer[0] = (char) -1;  // End flag
-    write(fd[0][WRITE], buffer, MAXPATHLENGTH);
-    write(fd[1][WRITE], buffer, MAXPATHLENGTH);
-
-    return 0;
 }
