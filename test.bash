@@ -5,4 +5,4 @@ if ! echo "$PATH" | grep -Eq "(^|:)$1($|:)" ; then
     PATH="$PATH:${tmpdist}"
 fi
 
-ipcrm -M 1729; make; ./image-search ${imgspath}/1.bmp
+make; ./image-search ${imgspath}/1.bmp

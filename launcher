@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Vérifier les arguments
+
+if [[ -z "$1" || -z "$2" ]]; then
+	echo "Usage : launcher [-i|--interactive|-a|--automatic] image [database_path]"
+	exit
+fi
+
+PATH="./img-dist/:$PATH"
+
+# Mode automatique
+
+if [[ "$1" == '-a' || "$1" == '--automatic' ]]; then
+	if [[ -z "$3" ]]; then
+		dir="./img/"
+	else
+        dir="$3/"
+    fi
+
+    ./list-file "$dir" | sed "s:^:$dir:g" | ./img-search "$2"
+
+# Mode interactive
+
+elif [[ "$1" == '-i' || "$1" == '--interactive' ]]; then
+    if [[ ! -z "$3" ]]; then
+        dir="$3/"
+    fi
+
+	cat | sed "s:^:$dir:g" | ./img-search "$2"
+
+else
+	echo "Mode non valide."
+	exit
+fi

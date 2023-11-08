@@ -46,6 +46,8 @@ int cleanup_parent(int fd[2][2], int * dist, char * path, sem_t * sem)
 
         if ((err |= sem_destroy(sem) < 0)) perror("sem_destroy");
 
+        if ((err |= munmap(sem, sizeof(sem_t)) < 0)) perror("munmap");
+
     #endif
 
     return err;
@@ -60,7 +62,6 @@ int cleanup_parent(int fd[2][2], int * dist, char * path, sem_t * sem)
 */
 int feedImagePaths(pid_t pid[2], int fd[2][2])
 {
-    printf("BEGIN OF PARENT\n");
     unsigned int i = 0;
     char buffer[MAXPATHLENGTH];
 
@@ -86,8 +87,6 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
         } 
         while (bytes < 0 && att < WRITE_ATTEMPTS);
 
-        printf("DID WRITE\n");
-
         if (bytes < 0)  // Write échec
         {
             terminateChildProcesses(pid);
@@ -110,8 +109,6 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
     buffer[0] = (char) -1;  // End flag
     write(fd[0][WRITE], buffer, MAXPATHLENGTH);
     write(fd[1][WRITE], buffer, MAXPATHLENGTH);
-
-    printf("END OF");
 
     return 0;
 }

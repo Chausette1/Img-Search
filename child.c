@@ -36,11 +36,8 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
         if (pid == 0)
         {
             // Supposé que img-dist est dans PATH
-            printf("buffer = \"%s\"; length = %lu\n", buffer, strlen(buffer));
 
             // img-dist : 0 -> 64 = ok, 65 -> = erreur
-
-            printf("args = %s %s\n", base, buffer);
 
             execlp("img-dist", "img-dist", base, buffer, (char*) NULL);
 
@@ -52,8 +49,6 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
             int status;
             wait(&status);
 
-            printf("status = %d\n", WEXITSTATUS(status));
-
             if (WEXITSTATUS(status) >= 0 && WEXITSTATUS(status) <= 64)
             {
                 // Comparer et enregistrer
@@ -62,8 +57,6 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
                 sem_wait(sem);
 
-                printf("IN SECTION CRITIQUE");
-
                 if (path[0] == '\0' || *dist > newdist)
                 {
                     *dist = newdist;
@@ -71,13 +64,10 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
                 }
 
                 sem_post(sem);
-
-                printf("critique DONE\n");
             }
         }
         else
         {
-            printf("pid=%d ", getpid());
             perror("compareImages -> fork");
             return 1;
         }
@@ -90,7 +80,7 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
     Fermer les pipes et détacher le shm. Cette fonction doit être la dernière à
     être appelée.
 */
-int cleanup_child(int fd_read, int * dist, char * path)
+int cleanup_child(int fd_read, int * dist, char * path, sem_t * sem)
 {
     close(fd_read);  // À la fin, ferme tous les pipes
 
@@ -98,6 +88,8 @@ int cleanup_child(int fd_read, int * dist, char * path)
 
     if ((err |= munmap(dist, sizeof(int)) < 0)) perror("munmap");
     if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
+
+    
 
     return err;
 }

@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <errno.h>
+#include <string.h>
 
 #include "common.h"
 
@@ -64,7 +65,7 @@ void create_semaphore(sem_t ** semptr)
 
     #else
     
-        if (sem_init(*semptr, O_CREAT | O_EXCL | 0600, 1) < 0)
+        if (sem_init(*semptr, 1, 1) < 0)
         {
             perror("sem_init");
             exit(1);
@@ -127,7 +128,6 @@ int main(int argc, char* argv[])
             /*  Fonctionnalité  */
 
             res |= compareImages(argv[1], fd[i][READ], dist_shm, path_shm, sem_shm);
-            printf("res = %d\n", res);
 
             /*  Cleanup  */
 
@@ -164,9 +164,8 @@ int main(int argc, char* argv[])
     wait(&status[0]);
     wait(&status[1]);
 
-    printf("C");
-
-    printf("\nRESULTS FOR TODAY'S BATTLE : dist = %d, path = \"%s\"", *dist_shm, path_shm);
+    if (strlen(path_shm) > 0) printf("Most similar image found: '%s' with a distance of %d.", path_shm, *dist_shm);
+    else printf("No similar image found (no comparison could be performed successfully).");
 
     /*  Cleanup  */
     
