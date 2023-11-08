@@ -45,13 +45,13 @@ void * create_shm(size_t size)
 
 void create_semaphore(sem_t ** semptr)
 {
-    *semptr = sem_open(OSX_SEMNAME, O_CREAT | O_EXCL, 0644, 1);
+    *semptr = sem_open(SEMNAME, O_CREAT | O_EXCL, 0644, 1);
 
     if (*semptr == SEM_FAILED)
     {
         if (errno == EEXIST)
         {
-            sem_unlink(OSX_SEMNAME);
+            sem_unlink(SEMNAME);
             create_semaphore(semptr);
         }
         else

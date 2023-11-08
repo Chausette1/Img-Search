@@ -67,7 +67,7 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
 
         // Lire le chemin suivant du pipe
 
-        bytes = read(fd_read, buffer, MAXPATHLENGTH);
+        bytes = read_safe(fd_read, buffer, MAXPATHLENGTH);
 
         if (bytes < 0)
         {
@@ -97,6 +97,7 @@ int compareImages(char* base, int fd_read, int * dist, char * path, sem_t* sem)
             int status;
             wait(&status);
 
+            // Sinon, erreur dans img-dist
             if (WEXITSTATUS(status) >= 0 && WEXITSTATUS(status) <= 64)
             {
                 // Comparer et enregistrer
@@ -142,6 +143,6 @@ int cleanup_child(int fd_read, int * dist, char * path, sem_t * sem)
     if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
 
     if ((err |= sem_close(sem) < 0)) perror("sem_close");
-    
+
     return err;
 }

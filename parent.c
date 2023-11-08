@@ -55,7 +55,6 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
         if (flag_end_parent)
         {
             terminateChildProcesses(pid);
-
             return 0;
         }
 
@@ -65,19 +64,9 @@ int feedImagePaths(pid_t pid[2], int fd[2][2])
 
         buffer[strcspn(buffer, "\n")] = '\0';
 
-        // Si write() échoue 3 fois sans SIGPIPE, abandonner et terminer
-        // EX : si le parent est interrompu par un signal mais résume après
-
-        unsigned char att = 0;
-        ssize_t bytes;
-
-        bytes = write(fd[i % 2][WRITE], buffer, MAXPATHLENGTH);
-
-        if (bytes < 0)  // Write échec
+        if (write_safe(fd[i % 2][WRITE], buffer, MAXPATHLENGTH) < 0)
         {
             terminateChildProcesses(pid);
-
-            perror("write");
             return 1;
         }
 
@@ -127,7 +116,7 @@ int cleanup_parent(int fd[2][2], int * dist, char * path, sem_t * sem)
     if ((err |= munmap(path, sizeof(char) * MAXPATHLENGTH) < 0)) perror("munmap");
 
     if ((err |= sem_close(sem) < 0)) perror("sem_close");
-    if ((err |= sem_unlink(OSX_SEMNAME) < 0)) perror("sem_unlink");
+    if ((err |= sem_unlink(SEMNAME) < 0)) perror("sem_unlink");
 
     return err;
 }
