@@ -1,9 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <signal.h>
-#include <sys/ipc.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <semaphore.h>
@@ -25,7 +23,7 @@ void handle_signal_child(int signal)
     }
 }
 
-void mask_signal()
+void mask_signal(void)
 {
     sigset_t sigset;
 
@@ -34,7 +32,7 @@ void mask_signal()
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 }
 
-void unmask_signal()
+void unmask_signal(void)
 {
     sigset_t sigset;
 

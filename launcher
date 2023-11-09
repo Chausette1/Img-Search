@@ -5,12 +5,6 @@
 if [[ -z "$1" || -z "$2" ]]; then
 	echo "Usage : launcher [-i|--interactive|-a|--automatic] image [database_path]"
 	exit
-elif [[ ! -f "$2" ]]; then
-    echo "image : Invalid file."
-    exit
-elif [[ ! -z "$3" && ! -d "$3" ]]; then
-    echo "[database_path] : The specified path is not a directory."
-    exit
 fi
 
 PATH="./img-dist/:$PATH"

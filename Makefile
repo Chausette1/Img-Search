@@ -8,3 +8,6 @@ imgsearch: main.c parent.c child.c common.c
 	gcc ${FLAGS} -c common.c
 	gcc ${FLAGS} -o img-search main.c parent.o child.o common.o
 	rm -f *.o
+
+clean:
+	rm -f img-search

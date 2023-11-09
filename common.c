@@ -4,7 +4,7 @@
 
 int read_safe(int fd, char * buffer, size_t size)
 {
-    size_t bytes = 0;
+    int bytes = 0;
 
     while (bytes < size)
     {
@@ -26,7 +26,7 @@ int read_safe(int fd, char * buffer, size_t size)
 
 int write_safe(int fd, char * buffer, size_t size)
 {
-    size_t bytes = 0;
+    int bytes = 0;
 
     while (bytes < size)
     {

@@ -1,10 +1,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <signal.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -51,6 +47,7 @@ void create_semaphore(sem_t ** semptr)
     {
         if (errno == EEXIST)
         {
+            printf("Cleaning up semaphore");
             sem_unlink(SEMNAME);
             create_semaphore(semptr);
         }
@@ -150,11 +147,11 @@ int main(int argc, char* argv[])
 
     if (strlen(path_shm) > 0) 
     {
-        printf("Most similar image found: '%s' with a distance of %d.", path_shm, *dist_shm);
+        printf("Most similar image found: '%s' with a distance of %d.\n", path_shm, *dist_shm);
     }
     else 
     {
-        printf("No similar image found (no comparison could be performed successfully).");
+        printf("No similar image found (no comparison could be performed successfully).\n");
     }
 
     /*  Cleanup  */
