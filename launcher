@@ -38,5 +38,4 @@ elif [[ "$1" == '-i' || "$1" == '--interactive' ]]; then
 
 else
 	echo "Usage : launcher [-i|--interactive|-a|--automatic] image [database_path]"
-	exit
 fi
