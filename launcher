@@ -5,6 +5,12 @@
 if [[ -z "$1" || -z "$2" ]]; then
 	echo "Usage : launcher [-i|--interactive|-a|--automatic] image [database_path]"
 	exit
+elif [[ ! -f "$2" ]]; then
+    echo "image : Invalid file."
+    exit
+elif [[ ! -z "$3" && ! -d "$3" ]]; then
+    echo "[database_path] : The specified path is not a directory."
+    exit
 fi
 
 PATH="./img-dist/:$PATH"
@@ -27,9 +33,10 @@ elif [[ "$1" == '-i' || "$1" == '--interactive' ]]; then
         dir="$3/"
     fi
 
+    echo "Input the images you with to compare, separated by a newline. End input with CTRL+D."
 	cat | sed "s:^:$dir:g" | ./img-search "$2"
 
 else
-	echo "Mode non valide."
+	echo "Usage : launcher [-i|--interactive|-a|--automatic] image [database_path]"
 	exit
 fi

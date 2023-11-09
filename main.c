@@ -76,9 +76,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    /*
-        Créer les pipes 
-    */
+    // 2. Créer les pipes
 
     int fd[2][2];  // 2 fd, un pour chaque processus fils
 
@@ -94,6 +92,7 @@ int main(int argc, char* argv[])
     //  4. Initialiser le sémaphore
 
     create_semaphore(&sem_shm);
+
 
     /* 
         Créer les processus (fork)
