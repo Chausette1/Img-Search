@@ -32,14 +32,10 @@ int write_safe(int fd, char * buffer, size_t size)
     {
         int res = write(fd, (&buffer)[bytes], size - bytes);
 
-        if (bytes < 0)
+        if (bytes < 0 && errno != EINTR)
         {
-            if (errno == EAGAIN || errno == EINTR) continue;
-            else
-            {
-                perror("write");
-                return 1;
-            }
+            perror("write");
+            return 1;
         }
         else 
         {
