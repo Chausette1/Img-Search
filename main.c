@@ -41,22 +41,26 @@ void * create_shm(size_t size)
 
 void create_semaphore(sem_t ** semptr)
 {
-    *semptr = sem_open(SEMNAME, O_CREAT | O_EXCL, 0644, 1);
-
-    if (*semptr == SEM_FAILED)
+    int failed;
+    do
     {
-        if (errno == EEXIST)
+        *semptr = sem_open(SEMNAME, O_CREAT | O_EXCL, 0644, 1);
+
+        if ((failed = *semptr == SEM_FAILED))
         {
-            printf("Cleaning up semaphore");
-            sem_unlink(SEMNAME);
-            create_semaphore(semptr);
-        }
-        else
-        {
-            perror("sem_open");
-            exit(1);
+            if (errno == EEXIST)
+            {
+                printf("Cleaning up semaphore");
+                sem_unlink(SEMNAME);
+            }
+            else
+            {
+                perror("sem_open");
+                exit(1);
+            }
         }
     }
+    while (failed);
 }
 
 int main(int argc, char* argv[]) 
